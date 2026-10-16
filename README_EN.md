@@ -25,7 +25,7 @@ Embedded right next to the model selector button in Antigravity's chat interface
   <img src="./assets/capsules.png" alt="Bottom Capsules Bar" width="600" />
 </div>
 
-- **Capsule 1 (`⏱` Session Stats)**: `{Rounds} rounds {Steps} steps · {⚡ Live TPS / 0 tok/s}`
+- **Capsule 1 (`⏱` Session Stats)**: `{Rounds} rounds {Steps} steps · {Output Speed tok/s}` (displays the average speed of the last substantial generation)
 - **Capsule 2 (`🗄` Token Usage)**: `{Cumulative Throughput} · Cache Hit {Percentage}%`
 - **Capsule 3 (`⭕` Context Capacity)**: Color-coded mini progress ring (Blue < 50%, Amber 50-80%, Red > 80%).
 
@@ -50,9 +50,8 @@ Embedded right next to the model selector button in Antigravity's chat interface
   - **Model Time**: Cumulative active generation time of the model.
   - **Tool Execution Time**: Cumulative time spent executing tools/commands.
   - **Time to First Token (TTFT)**: Average response latency.
-  - **Real-time Speed (TPS)**: Live streaming rate while generating (`⚡ 549 tok/s`); drops to `0 tok/s` when idle.
+  - **Output Speed (TPS)**: Average throughput rate of the last substantial text generation turn.
   - **Session Average Speed**: Globally weighted throughput rate across the entire conversation.
-  - **Recent Peak Speed**: Preserved record of the latest completed turn.
 
 - **Card 2: Token Usage (Click Capsule 2)**:
   - **Total Throughput & Cache Hit**: Cumulative token counter with highlighted cache hit rate (e.g., `94%`).

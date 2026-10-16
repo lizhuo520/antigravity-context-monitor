@@ -1,26 +1,19 @@
-/**
- * Antigravity Context & Session Monitor Widget
- * @author lizhuo520
- * @license MIT
- */
 (() => {
-  const REQUIRED_VERSION = '1.0M-interactive-three-cards-v15-release';
+  const REQUIRED_VERSION = '1.0M-interactive-three-cards-v16-steady-last-speed';
   const existingWidgets = document.querySelectorAll('#agy-model-context-widget, #agy-capsule-monitor-widget');
   if (window.__agyContextCircleVersion === REQUIRED_VERSION && existingWidgets.length === 1) {
     return;
   }
 
-  // 清理历史残留挂件与定时器
+  // 清理历史挂件与定时器
   existingWidgets.forEach(el => el.remove());
   document.querySelectorAll('#agy-context-circle-container, #antigravity-context-monitor-root').forEach(el => el.remove());
   if (window.__agyContextCircleTimer) clearInterval(window.__agyContextCircleTimer);
 
   window.__agyContextCircleVersion = REQUIRED_VERSION;
 
-  // 配置项
-  const CONTEXT_LIMIT = 1000000;      // 默认上下文上限：100万 (1.0M)
-  const MINI_CIRCLE_C = 59.6903;      // 2 * Math.PI * 9.5
-  const REFRESH_INTERVAL_MS = 2000;   // 刷新频率：每 2 秒一次
+  const CONTEXT_LIMIT = 1000000; // 1,000,000 (1.0M)
+  const MINI_CIRCLE_C = 59.6903;  // 2 * Math.PI * 9.5
 
   function formatTokens(n) {
     if (!n || n <= 0) return '0';
@@ -37,7 +30,7 @@
     return `${sec}秒`;
   }
 
-  // 样式定义
+  // 注入样式
   let styleEl = document.getElementById('agy-capsule-style');
   if (!styleEl) {
     styleEl = document.createElement('style');
@@ -94,11 +87,11 @@
       display: none;
       position: absolute;
       bottom: calc(100% + 10px);
-      width: 242px;
+      width: 236px;
       background: var(--card, #ffffff);
       border: 1px solid var(--border, rgba(0, 0, 0, 0.09));
       border-radius: 10px;
-      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.04);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.1), 0 2px 8px rgba(0, 0, 0, 0.04);
       padding: 12px 14px;
       z-index: 999999;
       font-family: var(--font-sans, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
@@ -135,7 +128,7 @@
     '    <path d="M8 13A6 6 0 1 0 2 8a5.96 5.96 0 0 0 .5 2.4" />',
     '    <path d="M8 8l2.5-2.5" />',
     '  </svg>',
-    '  <span id="agy-text-speed">-- 轮 -- 步 · 0 tok/s</span>',
+    '  <span id="agy-text-speed">-- 轮 -- 步 · -- tok/s</span>',
     '</div>',
 
     // 胶囊2：全会话累计流转 Token · 缓存命中
@@ -158,7 +151,7 @@
     '</div>',
 
     // -------------------------------------------------------------
-    // 卡片1：会话统计
+    // 卡片1：会话统计（图一样式，锚定在胶囊1上方）
     // -------------------------------------------------------------
     '<div id="agy-card-session" class="agy-popover-card" style="left: 0;">',
     '  <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 7px;">',
@@ -182,22 +175,18 @@
     '    <span id="agy-stat-ttft" class="agy-card-val">--</span>',
     '  </div>',
     '  <div class="agy-card-row">',
-    '    <span class="agy-card-label">实时速度（TPS）</span>',
-    '    <span id="agy-stat-tps" class="agy-card-val" style="color: #0284c7; font-weight: 600;">0 tok/s</span>',
+    '    <span class="agy-card-label">输出速度（TPS）</span>',
+    '    <span id="agy-stat-tps" class="agy-card-val" style="color: #0284c7; font-weight: 600;">-- tok/s</span>',
     '  </div>',
     '  <div class="agy-card-row">',
     '    <span class="agy-card-label">本次会话平均速度</span>',
     '    <span id="agy-stat-avg-speed" class="agy-card-val" style="color: #10b981; font-weight: 600;">-- tok/s</span>',
     '  </div>',
-    '  <div class="agy-card-row">',
-    '    <span class="agy-card-label">最近生成均速</span>',
-    '    <span id="agy-stat-last-speed" class="agy-card-val">-- tok/s</span>',
-    '  </div>',
     '  <div style="position: absolute; bottom: -5px; left: 32px; transform: rotate(45deg); width: 8px; height: 8px; background: var(--card, #ffffff); border-right: 1px solid var(--border, rgba(0, 0, 0, 0.09)); border-bottom: 1px solid var(--border, rgba(0, 0, 0, 0.09));"></div>',
     '</div>',
 
     // -------------------------------------------------------------
-    // 卡片2：Token 用量
+    // 卡片2：Token 用量（图二样式，锚定在胶囊2上方）
     // -------------------------------------------------------------
     '<div id="agy-card-tokens" class="agy-popover-card" style="left: 60px;">',
     '  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 7px;">',
@@ -232,7 +221,7 @@
     '</div>',
 
     // -------------------------------------------------------------
-    // 卡片3：上下文容量（流光条）
+    // 卡片3：上下文界面（流光条，锚定在胶囊3上方）
     // -------------------------------------------------------------
     '<div id="agy-card-context" class="agy-popover-card" style="right: 0;">',
     '  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">',
@@ -268,7 +257,9 @@
     '</div>'
   ].join('');
 
+  // -------------------------------------------------------------
   // 交互逻辑：点击胶囊打开对应页面，点击外部区域关闭
+  // -------------------------------------------------------------
   const pillSpeed = widget.querySelector('#agy-pill-speed');
   const pillCache = widget.querySelector('#agy-pill-cache');
   const pillPct = widget.querySelector('#agy-pill-pct');
@@ -310,6 +301,7 @@
     toggleCard(pillPct, cardContext);
   });
 
+  // 阻止卡片内部点击冒泡
   cardSession.addEventListener('click', (e) => e.stopPropagation());
   cardTokens.addEventListener('click', (e) => e.stopPropagation());
   cardContext.addEventListener('click', (e) => e.stopPropagation());
@@ -412,14 +404,14 @@
           totalCacheReadTokens += cache;
           lastUsage = u;
 
-          // 模型用时与生成速度
+          // 模型用时
           const startT = meta.viewableAt ? new Date(meta.viewableAt).getTime() : 0;
           const endT = meta.finishedGeneratingAt ? new Date(meta.finishedGeneratingAt).getTime() : 0;
           if (startT && endT && endT >= startT) {
             const dur = endT - startT;
             modelTotalMs += dur;
 
-            if (dur >= 300 && out >= 40) {
+            if (dur >= 400 && out >= 60) {
               lastSpeed = Math.round((out / (dur / 1000)) * 10) / 10;
             }
           }
@@ -454,7 +446,7 @@
         currentTurnUsed = stepCache + stepIn + stepOut;
       }
 
-      // 全会话累计总流转 Token 与全局缓存命中率
+      // 全会话累计总流转 Token
       const totalCumulativeTokens = totalInputTokens + totalOutputTokens + totalCacheReadTokens;
       const globalCacheHitRate = Math.round((totalCacheReadTokens / (totalCumulativeTokens || 1)) * 100);
 
@@ -474,19 +466,9 @@
       }
 
       // -----------------------------------------------------------
-      // 1. 实时流速状态判定 (Realtime Speed Engine)
+      // 1. 实时生成流速状态判定 (Realtime Speed Engine)
       // -----------------------------------------------------------
-      const lastStep = steps[steps.length - 1];
-      const lastModelStep = steps.slice().reverse().find(s => s && s.type === 'CORTEX_STEP_TYPE_PLANNER_RESPONSE' && s.metadata?.modelUsage);
-      let timeSinceLastModelFinish = 999999;
-      if (lastModelStep?.metadata?.finishedGeneratingAt) {
-        timeSinceLastModelFinish = Date.now() - new Date(lastModelStep.metadata.finishedGeneratingAt).getTime();
-      }
-      const isGenerating = (lastStep?.status === 'CORTEX_STEP_STATUS_RUNNING' || lastStep?.status === 'CORTEX_STEP_STATUS_GENERATING') || (timeSinceLastModelFinish < 3500);
-      const realtimeSpeed = isGenerating ? (lastSpeed || 0) : 0;
-
-      // -----------------------------------------------------------
-      // 2. 更新底部三段式胶囊栏
+      // 1. 更新底部三段式胶囊栏
       // -----------------------------------------------------------
       const textSpeed = document.getElementById('agy-text-speed');
       const textCache = document.getElementById('agy-text-cache');
@@ -494,12 +476,9 @@
       const miniRing = document.getElementById('agy-capsule-ring');
 
       if (textSpeed) {
-        if (isGenerating && realtimeSpeed > 0) {
-          textSpeed.innerText = `${rounds} 轮 ${steps.length} 步 · ⚡ ${realtimeSpeed} tok/s`;
-        } else {
-          textSpeed.innerText = `${rounds} 轮 ${steps.length} 步 · 0 tok/s`;
-        }
+        textSpeed.innerText = `${rounds} 轮 ${steps.length} 步 · ${lastSpeed ? lastSpeed + ' tok/s' : '-- tok/s'}`;
       }
+      // 胶囊2左侧数据：全会话累计流转 Token 数
       if (textCache) {
         textCache.innerText = `${formatTokens(totalCumulativeTokens)} tok · 缓存命中 ${globalCacheHitRate}%`;
       }
@@ -514,14 +493,13 @@
       }
 
       // -----------------------------------------------------------
-      // 3. 更新卡片1：会话统计
+      // 2. 更新卡片1：会话统计
       // -----------------------------------------------------------
       const elModelTime = document.getElementById('agy-stat-modeltime');
       const elToolTime = document.getElementById('agy-stat-tooltime');
       const elTtft = document.getElementById('agy-stat-ttft');
       const elTps = document.getElementById('agy-stat-tps');
       const elAvgSpeed = document.getElementById('agy-stat-avg-speed');
-      const elLastSpeed = document.getElementById('agy-stat-last-speed');
 
       const sessionAvgSpeed = modelTotalMs > 0 ? (totalOutputTokens / (modelTotalMs / 1000)).toFixed(1) : '0';
 
@@ -529,21 +507,14 @@
       if (elToolTime) elToolTime.innerText = fmtDuration(toolTotalMs);
       if (elTtft) elTtft.innerText = avgTtftMs > 0 ? (avgTtftMs / 1000).toFixed(1) + '秒' : '--';
       if (elTps) {
-        if (isGenerating && realtimeSpeed > 0) {
-          elTps.innerHTML = `<span style="color: #0284c7; font-weight: 600;">⚡ ${realtimeSpeed} tok/s</span>`;
-        } else {
-          elTps.innerHTML = `<span style="color: var(--muted-foreground, rgba(16,16,16,0.6)); font-weight: 500;">0 tok/s</span>`;
-        }
+        elTps.innerText = lastSpeed ? `${lastSpeed} tok/s` : '-- tok/s';
       }
       if (elAvgSpeed) {
         elAvgSpeed.innerText = sessionAvgSpeed ? `${sessionAvgSpeed} tok/s` : '-- tok/s';
       }
-      if (elLastSpeed) {
-        elLastSpeed.innerText = lastSpeed ? `${lastSpeed} tok/s` : '--';
-      }
 
       // -----------------------------------------------------------
-      // 4. 更新卡片2：Token 用量
+      // 3. 更新卡片2：Token 用量
       // -----------------------------------------------------------
       const elTokTotal = document.getElementById('agy-token-total');
       const elTokHitRate = document.getElementById('agy-token-hitrate');
@@ -558,7 +529,7 @@
       if (elTokOutput) elTokOutput.innerText = `${totalOutputTokens.toLocaleString()} tok`;
 
       // -----------------------------------------------------------
-      // 5. 更新卡片3：上下文容量（流光进度条）
+      // 4. 更新卡片3：上下文容量（流光进度条）
       // -----------------------------------------------------------
       const elContextPct = document.getElementById('agy-context-pct');
       const elContextBar = document.getElementById('agy-context-bar');
@@ -588,5 +559,5 @@
   ensureMounted();
   updateData();
 
-  window.__agyContextCircleTimer = setInterval(updateData, REFRESH_INTERVAL_MS);
+  window.__agyContextCircleTimer = setInterval(updateData, 2000);
 })();
