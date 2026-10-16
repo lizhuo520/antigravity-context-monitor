@@ -1,0 +1,26 @@
+{
+  "name": "antigravity-context-monitor",
+  "version": "1.0.0",
+  "description": "Antigravity 客户端底部会话监控挂件：实时 TPS、流光上下文进度条、全会话 Token 用量与统计卡片",
+  "type": "module",
+  "main": "src/widget.js",
+  "scripts": {
+    "start": "node src/injector.js",
+    "inject": "node src/injector.js",
+    "daemon": "node src/daemon.js"
+  },
+  "keywords": [
+    "antigravity",
+    "context-window",
+    "token-monitor",
+    "gemini",
+    "tps",
+    "prompt-cache"
+  ],
+  "author": "lizhuo520",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lizhuo520/antigravity-context-monitor.git"
+  }
+}
