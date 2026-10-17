@@ -36,12 +36,14 @@ Embedded right next to the model selector button in Antigravity's chat interface
 <div align="center">
   <table>
     <tr>
-      <td align="center"><b>Session Stats Card</b></td>
-      <td align="center"><b>Token Usage Details Card</b></td>
+      <td align="center"><b>Card 1: Session Stats</b></td>
+      <td align="center"><b>Card 2: Token Usage</b></td>
+      <td align="center"><b>Card 3: Context Capacity</b></td>
     </tr>
     <tr>
-      <td><img src="./assets/card_session.png" width="300" alt="Session Stats" /></td>
-      <td><img src="./assets/card_tokens.png" width="300" alt="Token Usage" /></td>
+      <td align="center"><img src="./assets/card_session.png" width="240" alt="Session Stats" /></td>
+      <td align="center"><img src="./assets/card_tokens.png" width="240" alt="Token Usage" /></td>
+      <td align="center"><img src="./assets/card_context.png" width="240" alt="Context Capacity" /></td>
     </tr>
   </table>
 </div>

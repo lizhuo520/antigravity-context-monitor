@@ -36,12 +36,14 @@
 <div align="center">
   <table>
     <tr>
-      <td align="center"><b>会话统计页面</b></td>
-      <td align="center"><b>Token 用量明细</b></td>
+      <td align="center"><b>卡片 1：会话统计</b></td>
+      <td align="center"><b>卡片 2：Token 用量</b></td>
+      <td align="center"><b>卡片 3：上下文容量</b></td>
     </tr>
     <tr>
-      <td><img src="./assets/card_session.png" width="300" alt="会话统计" /></td>
-      <td><img src="./assets/card_tokens.png" width="300" alt="Token用量" /></td>
+      <td align="center"><img src="./assets/card_session.png" width="240" alt="会话统计" /></td>
+      <td align="center"><img src="./assets/card_tokens.png" width="240" alt="Token用量" /></td>
+      <td align="center"><img src="./assets/card_context.png" width="240" alt="上下文容量" /></td>
     </tr>
   </table>
 </div>
