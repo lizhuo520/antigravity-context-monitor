@@ -1,14 +1,19 @@
 (() => {
-  const REQUIRED_VERSION = '1.0M-interactive-three-cards-v16-steady-last-speed';
+  const REQUIRED_VERSION = '1.0M-interactive-three-cards-v17-instant-switch-fixed-tps';
   const existingWidgets = document.querySelectorAll('#agy-model-context-widget, #agy-capsule-monitor-widget');
   if (window.__agyContextCircleVersion === REQUIRED_VERSION && existingWidgets.length === 1) {
     return;
   }
 
-  // 清理历史挂件与定时器
+  // 清理历史挂件、定时器与全局监听
   existingWidgets.forEach(el => el.remove());
   document.querySelectorAll('#agy-context-circle-container, #antigravity-context-monitor-root').forEach(el => el.remove());
   if (window.__agyContextCircleTimer) clearInterval(window.__agyContextCircleTimer);
+  if (window.__agyFastUrlWatcher) clearInterval(window.__agyFastUrlWatcher);
+  if (window.__agyRetryMountTimer) clearInterval(window.__agyRetryMountTimer);
+  if (window.__agyCloseMonitorPopovers) window.removeEventListener('click', window.__agyCloseMonitorPopovers);
+  if (window.__agyOnPopState) window.removeEventListener('popstate', window.__agyOnPopState);
+  if (window.__agyOnHashChange) window.removeEventListener('hashchange', window.__agyOnHashChange);
 
   window.__agyContextCircleVersion = REQUIRED_VERSION;
 
@@ -28,6 +33,11 @@
     const sec = totalSec % 60;
     if (min > 0) return `${min}分${sec}秒`;
     return `${sec}秒`;
+  }
+
+  function getCascadeIdFromUrl() {
+    const match = location.pathname.match(/\/c\/([a-zA-Z0-9_-]+)/);
+    return match ? match[1] : '';
   }
 
   // 注入样式
@@ -151,7 +161,7 @@
     '</div>',
 
     // -------------------------------------------------------------
-    // 卡片1：会话统计（图一样式，锚定在胶囊1上方）
+    // 卡片1：会话统计（已去掉本次会话平均速度）
     // -------------------------------------------------------------
     '<div id="agy-card-session" class="agy-popover-card" style="left: 0;">',
     '  <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 7px;">',
@@ -178,15 +188,11 @@
     '    <span class="agy-card-label">输出速度（TPS）</span>',
     '    <span id="agy-stat-tps" class="agy-card-val" style="color: #0284c7; font-weight: 600;">-- tok/s</span>',
     '  </div>',
-    '  <div class="agy-card-row">',
-    '    <span class="agy-card-label">本次会话平均速度</span>',
-    '    <span id="agy-stat-avg-speed" class="agy-card-val" style="color: #10b981; font-weight: 600;">-- tok/s</span>',
-    '  </div>',
     '  <div style="position: absolute; bottom: -5px; left: 32px; transform: rotate(45deg); width: 8px; height: 8px; background: var(--card, #ffffff); border-right: 1px solid var(--border, rgba(0, 0, 0, 0.09)); border-bottom: 1px solid var(--border, rgba(0, 0, 0, 0.09));"></div>',
     '</div>',
 
     // -------------------------------------------------------------
-    // 卡片2：Token 用量（图二样式，锚定在胶囊2上方）
+    // 卡片2：Token 用量
     // -------------------------------------------------------------
     '<div id="agy-card-tokens" class="agy-popover-card" style="left: 60px;">',
     '  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 7px;">',
@@ -221,7 +227,7 @@
     '</div>',
 
     // -------------------------------------------------------------
-    // 卡片3：上下文界面（流光条，锚定在胶囊3上方）
+    // 卡片3：上下文界面（流光条）
     // -------------------------------------------------------------
     '<div id="agy-card-context" class="agy-popover-card" style="right: 0;">',
     '  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">',
@@ -230,7 +236,6 @@
     '    </div>',
     '    <span id="agy-context-pct" style="color: var(--primary, #007acc); font-weight: 700; font-size: 13px; font-variant-numeric: tabular-nums;">0%</span>',
     '  </div>',
-    '  <!-- 从左向右流光特效进度条 -->',
     '  <div style="height: 6px; width: 100%; background: color-mix(in srgb, var(--foreground, #101010) 8%, transparent); border-radius: 9999px; overflow: hidden; margin-bottom: 9px; position: relative;">',
     '    <div id="agy-context-bar" class="agy-beam-container" style="width: 0%; height: 100%; background: linear-gradient(90deg, #0284c7, #38bdf8); border-radius: 9999px; transition: width 0.3s ease;">',
     '      <div class="agy-beam-light"></div>',
@@ -257,9 +262,7 @@
     '</div>'
   ].join('');
 
-  // -------------------------------------------------------------
-  // 交互逻辑：点击胶囊打开对应页面，点击外部区域关闭
-  // -------------------------------------------------------------
+  // 交互逻辑
   const pillSpeed = widget.querySelector('#agy-pill-speed');
   const pillCache = widget.querySelector('#agy-pill-cache');
   const pillPct = widget.querySelector('#agy-pill-pct');
@@ -301,13 +304,10 @@
     toggleCard(pillPct, cardContext);
   });
 
-  // 阻止卡片内部点击冒泡
   cardSession.addEventListener('click', (e) => e.stopPropagation());
   cardTokens.addEventListener('click', (e) => e.stopPropagation());
   cardContext.addEventListener('click', (e) => e.stopPropagation());
 
-  // 点击页面任何外部区域，收回页面
-  window.removeEventListener('click', window.__agyCloseMonitorPopovers);
   window.__agyCloseMonitorPopovers = (e) => {
     if (!widget.contains(e.target)) {
       closeAll();
@@ -349,15 +349,56 @@
     return true;
   }
 
+  // 精准计算单步生成速度
+  function getStepSpeed(s) {
+    const m = s.metadata || {};
+    const u = m.modelUsage;
+    if (!u) return null;
+    const out = Number(u.outputTokens || 0);
+    if (out < 50) return null;
+
+    let dur = 0;
+    const transitions = m.internalMetadata?.statusTransitions || [];
+    const genT = transitions.find(t => t.updatedStatus === 'CORTEX_STEP_STATUS_GENERATING')?.timestamp;
+    const doneT = transitions.find(t => t.updatedStatus === 'CORTEX_STEP_STATUS_DONE')?.timestamp;
+
+    if (genT && doneT) {
+      dur = new Date(doneT).getTime() - new Date(genT).getTime();
+    }
+    if (dur < 300) {
+      const v = m.viewableAt ? new Date(m.viewableAt).getTime() : 0;
+      const f = m.finishedGeneratingAt ? new Date(m.finishedGeneratingAt).getTime() : 0;
+      if (v && f && f > v) dur = f - v;
+    }
+    if (dur < 300) {
+      const c = m.createdAt ? new Date(m.createdAt).getTime() : 0;
+      const f = m.finishedGeneratingAt ? new Date(m.finishedGeneratingAt).getTime() : 0;
+      if (c && f && f > c) {
+        const totalTime = f - c;
+        if (out >= 100 && totalTime >= 800) {
+          dur = totalTime;
+        }
+      }
+    }
+
+    if (dur >= 400) {
+      const spd = Math.round((out / (dur / 1000)) * 10) / 10;
+      if (spd >= 10 && spd <= 600) {
+        return { out, dur, spd };
+      }
+    }
+    return null;
+  }
+
+  let lastActiveCascadeId = '';
+
   async function updateData() {
     ensureMounted();
 
     try {
-      const path = location.pathname;
-      const match = path.match(/\/c\/([a-zA-Z0-9_-]+)/);
-      if (!match) return;
+      const cascadeId = getCascadeIdFromUrl();
+      if (!cascadeId) return;
 
-      const cascadeId = match[1];
       const token = window.__APP_CONFIG__ && window.__APP_CONFIG__.csrfToken;
 
       const res = await fetch('/exa.language_server_pb.LanguageServerService/GetCascadeTrajectorySteps', {
@@ -369,7 +410,7 @@
         body: JSON.stringify({
           cascadeId: cascadeId,
           startIndex: 0,
-          endIndex: 500,
+          endIndex: 10000,
           metadata: { ideName: 'antigravity', extensionName: 'antigravity' }
         })
       });
@@ -387,40 +428,61 @@
       let totalInputTokens = 0;
       let totalOutputTokens = 0;
       let totalCacheReadTokens = 0;
-      let lastSpeed = null;
       let lastUsage = null;
+
+      // 反向扫描提取“上一次发生大段文字生成时的平均速度”
+      // 优先扫描大段文本生成 (out >= 200)；若无则降级扫描常规生成 (out >= 50)
+      let lastSpeed = null;
+      for (let i = steps.length - 1; i >= 0; i--) {
+        const sp = getStepSpeed(steps[i]);
+        if (sp && sp.out >= 200) {
+          lastSpeed = sp.spd;
+          break;
+        }
+      }
+      if (!lastSpeed) {
+        for (let i = steps.length - 1; i >= 0; i--) {
+          const sp = getStepSpeed(steps[i]);
+          if (sp) {
+            lastSpeed = sp.spd;
+            break;
+          }
+        }
+      }
 
       for (const s of steps) {
         const meta = s.metadata || {};
 
         if (meta.modelUsage) {
           const u = meta.modelUsage;
-          const inp = Number(u.inputTokens || 0);
-          const out = Number(u.outputTokens || 0);
-          const cache = Number(u.cacheReadTokens || 0);
-
-          totalInputTokens += inp;
-          totalOutputTokens += out;
-          totalCacheReadTokens += cache;
+          totalInputTokens += Number(u.inputTokens || 0);
+          totalOutputTokens += Number(u.outputTokens || 0);
+          totalCacheReadTokens += Number(u.cacheReadTokens || 0);
           lastUsage = u;
 
-          // 模型用时
-          const startT = meta.viewableAt ? new Date(meta.viewableAt).getTime() : 0;
-          const endT = meta.finishedGeneratingAt ? new Date(meta.finishedGeneratingAt).getTime() : 0;
-          if (startT && endT && endT >= startT) {
-            const dur = endT - startT;
-            modelTotalMs += dur;
-
-            if (dur >= 400 && out >= 60) {
-              lastSpeed = Math.round((out / (dur / 1000)) * 10) / 10;
-            }
+          // 模型用时精准累加
+          let stepModelMs = 0;
+          const transitions = meta.internalMetadata?.statusTransitions || [];
+          const genT = transitions.find(t => t.updatedStatus === 'CORTEX_STEP_STATUS_GENERATING')?.timestamp;
+          const doneT = transitions.find(t => t.updatedStatus === 'CORTEX_STEP_STATUS_DONE')?.timestamp;
+          if (genT && doneT) {
+            stepModelMs = new Date(doneT).getTime() - new Date(genT).getTime();
+          }
+          if (stepModelMs < 100) {
+            const c = meta.createdAt ? new Date(meta.createdAt).getTime() : 0;
+            const f = meta.finishedGeneratingAt ? new Date(meta.finishedGeneratingAt).getTime() : 0;
+            if (c && f && f > c) stepModelMs = f - c;
+          }
+          if (stepModelMs > 0 && stepModelMs < 300000) {
+            modelTotalMs += stepModelMs;
           }
 
           // 首 Token 时间 (TTFT)
           const createT = meta.createdAt ? new Date(meta.createdAt).getTime() : 0;
-          if (createT && startT && startT >= createT) {
-            const ttft = startT - createT;
-            if (ttft > 100 && ttft < 60000) {
+          const genStart = genT ? new Date(genT).getTime() : (meta.viewableAt ? new Date(meta.viewableAt).getTime() : 0);
+          if (createT && genStart && genStart >= createT) {
+            const ttft = genStart - createT;
+            if (ttft > 50 && ttft < 60000) {
               ttftList.push(ttft);
             }
           }
@@ -465,11 +527,7 @@
         barGradient = 'linear-gradient(90deg, #d97706, #fbbf24)';
       }
 
-      // -----------------------------------------------------------
-      // 1. 实时生成流速状态判定 (Realtime Speed Engine)
-      // -----------------------------------------------------------
       // 1. 更新底部三段式胶囊栏
-      // -----------------------------------------------------------
       const textSpeed = document.getElementById('agy-text-speed');
       const textCache = document.getElementById('agy-text-cache');
       const textPct = document.getElementById('agy-text-pct');
@@ -478,7 +536,6 @@
       if (textSpeed) {
         textSpeed.innerText = `${rounds} 轮 ${steps.length} 步 · ${lastSpeed ? lastSpeed + ' tok/s' : '-- tok/s'}`;
       }
-      // 胶囊2左侧数据：全会话累计流转 Token 数
       if (textCache) {
         textCache.innerText = `${formatTokens(totalCumulativeTokens)} tok · 缓存命中 ${globalCacheHitRate}%`;
       }
@@ -492,16 +549,11 @@
         miniRing.style.strokeDashoffset = pct <= 0 ? MINI_CIRCLE_C : miniOffset;
       }
 
-      // -----------------------------------------------------------
       // 2. 更新卡片1：会话统计
-      // -----------------------------------------------------------
       const elModelTime = document.getElementById('agy-stat-modeltime');
       const elToolTime = document.getElementById('agy-stat-tooltime');
       const elTtft = document.getElementById('agy-stat-ttft');
       const elTps = document.getElementById('agy-stat-tps');
-      const elAvgSpeed = document.getElementById('agy-stat-avg-speed');
-
-      const sessionAvgSpeed = modelTotalMs > 0 ? (totalOutputTokens / (modelTotalMs / 1000)).toFixed(1) : '0';
 
       if (elModelTime) elModelTime.innerText = fmtDuration(modelTotalMs);
       if (elToolTime) elToolTime.innerText = fmtDuration(toolTotalMs);
@@ -509,13 +561,8 @@
       if (elTps) {
         elTps.innerText = lastSpeed ? `${lastSpeed} tok/s` : '-- tok/s';
       }
-      if (elAvgSpeed) {
-        elAvgSpeed.innerText = sessionAvgSpeed ? `${sessionAvgSpeed} tok/s` : '-- tok/s';
-      }
 
-      // -----------------------------------------------------------
       // 3. 更新卡片2：Token 用量
-      // -----------------------------------------------------------
       const elTokTotal = document.getElementById('agy-token-total');
       const elTokHitRate = document.getElementById('agy-token-hitrate');
       const elTokUncached = document.getElementById('agy-token-uncached');
@@ -528,9 +575,7 @@
       if (elTokCached) elTokCached.innerText = `${totalCacheReadTokens.toLocaleString()} tok`;
       if (elTokOutput) elTokOutput.innerText = `${totalOutputTokens.toLocaleString()} tok`;
 
-      // -----------------------------------------------------------
-      // 4. 更新卡片3：上下文容量（流光进度条）
-      // -----------------------------------------------------------
+      // 4. 更新卡片3：上下文容量
       const elContextPct = document.getElementById('agy-context-pct');
       const elContextBar = document.getElementById('agy-context-bar');
       const elContextUsed = document.getElementById('agy-context-used');
@@ -556,8 +601,71 @@
     }
   }
 
+  // -----------------------------------------------------------
+  // 极速切换机制：切会话 0 延迟响应与重挂载
+  // -----------------------------------------------------------
+  function triggerImmediateUpdate() {
+    if (window.__agyRetryMountTimer) {
+      clearInterval(window.__agyRetryMountTimer);
+      window.__agyRetryMountTimer = null;
+    }
+
+    if (ensureMounted()) {
+      updateData();
+    } else {
+      let attempts = 0;
+      window.__agyRetryMountTimer = setInterval(() => {
+        attempts++;
+        if (ensureMounted()) {
+          clearInterval(window.__agyRetryMountTimer);
+          window.__agyRetryMountTimer = null;
+          updateData();
+        } else if (attempts >= 20) {
+          clearInterval(window.__agyRetryMountTimer);
+          window.__agyRetryMountTimer = null;
+        }
+      }, 50);
+    }
+  }
+
+  function handleRouteOrUrlChange() {
+    const curId = getCascadeIdFromUrl();
+    if (curId && curId !== lastActiveCascadeId) {
+      lastActiveCascadeId = curId;
+      triggerImmediateUpdate();
+    }
+  }
+
+  // 拦截 pushState 与 replaceState
+  if (!window.__agyPatchedHistory) {
+    window.__agyPatchedHistory = true;
+    const origPush = history.pushState;
+    history.pushState = function(...args) {
+      origPush.apply(this, args);
+      handleRouteOrUrlChange();
+    };
+    const origReplace = history.replaceState;
+    history.replaceState = function(...args) {
+      origReplace.apply(this, args);
+      handleRouteOrUrlChange();
+    };
+  }
+
+  window.__agyOnPopState = () => handleRouteOrUrlChange();
+  window.__agyOnHashChange = () => handleRouteOrUrlChange();
+  window.addEventListener('popstate', window.__agyOnPopState);
+  window.addEventListener('hashchange', window.__agyOnHashChange);
+
+  // 150ms 超高速 URL 变化嗅探器
+  window.__agyFastUrlWatcher = setInterval(() => {
+    handleRouteOrUrlChange();
+  }, 150);
+
+  // 初始化执行
+  lastActiveCascadeId = getCascadeIdFromUrl();
   ensureMounted();
   updateData();
 
+  // 兜底 2 秒定期刷新（同一会话中生成完毕时自动同步数据）
   window.__agyContextCircleTimer = setInterval(updateData, 2000);
 })();

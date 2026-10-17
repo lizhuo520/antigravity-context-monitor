@@ -8,7 +8,7 @@
 [![Antigravity](https://img.shields.io/badge/Client-Antigravity-6366f1.svg)](#)
 
 **A sleek, non-intrusive bottom-bar monitoring widget & interactive dashboard for Google Antigravity**  
-Real-time TPS Flow · Animated Shimmer Context Bar · Session Average Speed · Token Cache Stats · Click-to-Inspect Cards
+Real-time TPS Flow · Animated Shimmer Context Bar · Time & Usage Stats · Token Cache Stats · Click-to-Inspect Cards
 
 [简体中文](./README.md) | [English](./README_EN.md)
 
@@ -53,7 +53,6 @@ Embedded right next to the model selector button in Antigravity's chat interface
   - **Tool Execution Time**: Cumulative time spent executing tools/commands.
   - **Time to First Token (TTFT)**: Average response latency.
   - **Output Speed (TPS)**: Average throughput rate of the last substantial text generation turn.
-  - **Session Average Speed**: Globally weighted throughput rate across the entire conversation.
 
 - **Card 2: Token Usage (Click Capsule 2)**:
   - **Total Throughput & Cache Hit**: Cumulative token counter with highlighted cache hit rate (e.g., `94%`).
