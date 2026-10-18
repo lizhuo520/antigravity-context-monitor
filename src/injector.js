@@ -6,7 +6,7 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-function getDevToolsPortFile() {
+export function getDevToolsPortFile() {
   const platform = os.platform();
   const home = os.homedir();
   if (platform === 'win32') {
@@ -18,110 +18,139 @@ function getDevToolsPortFile() {
   }
 }
 
-export async function injectWidget() {
+export function isAntigravityProcessRunning() {
+  try {
+    const portFile = getDevToolsPortFile();
+    if (fs.existsSync(portFile)) return true;
+  } catch (_) {}
+  return false;
+}
+
+export async function injectWidget(options = {}) {
+  const { silent = false, isCli = false } = options;
   const portFile = getDevToolsPortFile();
+
   if (!fs.existsSync(portFile)) {
-    console.error('❌ 未找到 DevToolsActivePort 文件，请确认 Antigravity 客户端已启动。');
-    console.error(`   检查路径: ${portFile}`);
-    process.exit(1);
+    if (!silent) {
+      console.error('❌ 未找到 DevToolsActivePort 文件，请确认 Antigravity 客户端已启动。');
+      console.error(`   检查路径: ${portFile}`);
+    }
+    if (isCli) process.exit(1);
+    return { success: false, reason: 'port_file_not_found' };
   }
 
-  const port = parseInt(fs.readFileSync(portFile, 'utf-8').split('\n')[0].trim(), 10);
-  console.log(`🔍 正在连接 Antigravity 调试端口: 127.0.0.1:${port}...`);
+  let port;
+  try {
+    port = parseInt(fs.readFileSync(portFile, 'utf-8').split('\n')[0].trim(), 10);
+  } catch (err) {
+    if (!silent) console.error('❌ 无法读取 DevToolsActivePort:', err.message);
+    if (isCli) process.exit(1);
+    return { success: false, reason: 'invalid_port', error: err.message };
+  }
+
+  if (!silent) console.log(`🔍 正在连接 Antigravity 调试端口: 127.0.0.1:${port}...`);
 
   let targets = [];
   try {
     const res = await fetch(`http://127.0.0.1:${port}/json`);
     targets = await res.json();
   } catch (err) {
-    console.error(`❌ 无法访问 http://127.0.0.1:${port}/json:`, err.message);
-    process.exit(1);
+    if (!silent) console.error(`❌ 无法访问 http://127.0.0.1:${port}/json:`, err.message);
+    if (isCli) process.exit(1);
+    return { success: false, reason: 'cannot_connect_port', error: err.message };
   }
 
-  const page = targets.find(t => t.type === 'page' && t.url && t.url.includes('/c/'));
-  if (!page) {
-    console.log('⚠️ 未检测到处于激活状态的会话页面 (/c/...)，请在 Antigravity 中打开任意对话。');
-    process.exit(0);
+  const pages = targets.filter(t => t.type === 'page' && t.url && t.url.includes('/c/'));
+  if (pages.length === 0) {
+    if (!silent) console.log('⚠️ 未检测到处于激活状态的会话页面 (/c/...)，请在 Antigravity 中打开任意对话。');
+    if (isCli) process.exit(0);
+    return { success: false, reason: 'no_session_page' };
   }
 
   const widgetPath = path.join(__dirname, 'widget.js');
   const widgetCode = fs.readFileSync(widgetPath, 'utf-8');
 
-  console.log(`🔌 正在向会话页面 [${page.title || page.url}] 注入监控挂件...`);
+  let anyInjected = false;
 
-  const ws = new WebSocket(page.webSocketDebuggerUrl);
+  for (const page of pages) {
+    try {
+      await new Promise((resolve, reject) => {
+        const ws = new WebSocket(page.webSocketDebuggerUrl);
+        const timeout = setTimeout(() => {
+          ws.close();
+          reject(new Error('WebSocket 连接超时'));
+        }, 3000);
 
-  const timeout = setTimeout(() => {
-    console.error('❌ WebSocket 连接超时。');
-    process.exit(1);
-  }, 4000);
+        ws.onopen = () => {
+          clearTimeout(timeout);
+          let msgId = 1;
 
-  return new Promise((resolve, reject) => {
-    ws.onopen = () => {
-      clearTimeout(timeout);
-      let msgId = 1;
-
-      function evalScript(code) {
-        return new Promise((res, rej) => {
-          const id = msgId++;
-          const t = setTimeout(() => rej(new Error('执行超时')), 3000);
-          const onMsg = (evt) => {
-            try {
-              const data = JSON.parse(evt.data);
-              if (data.id === id) {
-                clearTimeout(t);
-                ws.removeEventListener('message', onMsg);
-                res(data.result?.result?.value);
-              }
-            } catch (e) { rej(e); }
-          };
-          ws.addEventListener('message', onMsg);
-          ws.send(JSON.stringify({
-            id,
-            method: 'Runtime.evaluate',
-            params: { expression: code, returnByValue: true }
-          }));
-        });
-      }
-
-      evalScript(widgetCode)
-        .then(() => new Promise(r => setTimeout(r, 600)))
-        .then(() => {
-          return evalScript(`({
-            mounted: !!document.getElementById('agy-capsule-monitor-widget'),
-            pillSpeed: document.getElementById('agy-text-speed')?.innerText,
-            pillCache: document.getElementById('agy-text-cache')?.innerText,
-            pillPct: document.getElementById('agy-text-pct')?.innerText
-          })`);
-        })
-        .then((state) => {
-          if (state && state.mounted) {
-            console.log('✅ 监控挂件已成功注入并激活！');
-            console.log(`   ⏱ 胶囊1: ${state.pillSpeed}`);
-            console.log(`   🗄 胶囊2: ${state.pillCache}`);
-            console.log(`   ⭕ 胶囊3: ${state.pillPct}`);
-          } else {
-            console.log('⚠️ 挂件注入成功，等待首次渲染数据...');
+          function evalScript(code) {
+            return new Promise((res, rej) => {
+              const id = msgId++;
+              const t = setTimeout(() => rej(new Error('执行超时')), 3000);
+              const onMsg = (evt) => {
+                try {
+                  const data = JSON.parse(evt.data);
+                  if (data.id === id) {
+                    clearTimeout(t);
+                    ws.removeEventListener('message', onMsg);
+                    res(data.result?.result?.value);
+                  }
+                } catch (e) { rej(e); }
+              };
+              ws.addEventListener('message', onMsg);
+              ws.send(JSON.stringify({
+                id,
+                method: 'Runtime.evaluate',
+                params: { expression: code, returnByValue: true }
+              }));
+            });
           }
+
+          evalScript(widgetCode)
+            .then(() => new Promise(r => setTimeout(r, 400)))
+            .then(() => {
+              return evalScript(`({
+                mounted: !!document.getElementById('agy-capsule-monitor-widget'),
+                pillSpeed: document.getElementById('agy-text-speed')?.innerText,
+                pillCache: document.getElementById('agy-text-cache')?.innerText,
+                pillPct: document.getElementById('agy-text-pct')?.innerText
+              })`);
+            })
+            .then((state) => {
+              if (state && state.mounted) {
+                anyInjected = true;
+                if (!silent) {
+                  console.log(`✅ 监控挂件已成功注入 [${page.title || page.url}]！`);
+                  console.log(`   ⏱ 胶囊1: ${state.pillSpeed}`);
+                  console.log(`   🗄 胶囊2: ${state.pillCache}`);
+                  console.log(`   ⭕ 胶囊3: ${state.pillPct}`);
+                }
+              }
+              ws.close();
+              resolve();
+            })
+            .catch(err => {
+              if (!silent) console.error(`❌ 注入页面 [${page.title || page.url}] 失败:`, err.message);
+              ws.close();
+              resolve(); // 继续注入下一个页面
+            });
+        };
+
+        ws.onerror = (err) => {
+          clearTimeout(timeout);
           ws.close();
           resolve();
-        })
-        .catch(err => {
-          console.error('❌ 注入失败:', err);
-          ws.close();
-          reject(err);
-        });
-    };
+        };
+      });
+    } catch (_) {}
+  }
 
-    ws.onerror = (err) => {
-      clearTimeout(timeout);
-      console.error('❌ WebSocket 连接出错:', err);
-      reject(err);
-    };
-  });
+  return { success: anyInjected };
 }
 
-// 直接运行脚本时执行注入
+// 直接以 CLI 运行时
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  injectWidget().catch(() => process.exit(1));
+  injectWidget({ isCli: true }).catch(() => process.exit(1));
 }

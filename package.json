@@ -7,7 +7,8 @@
   "scripts": {
     "start": "node src/injector.js",
     "inject": "node src/injector.js",
-    "daemon": "node src/daemon.js"
+    "daemon": "node src/daemon.js",
+    "sync": "node src/daemon.js --exit-with-app"
   },
   "keywords": [
     "antigravity",

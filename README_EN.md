@@ -97,13 +97,16 @@ npm run inject
 
 ---
 
-### Option 3: Continuous Daemon Mode
+### Option 3: Synchronized Lifecycle with Antigravity (Recommended)
 
-To keep the widget injected automatically across window reloads or restarts:
+#### Mode A: Silent Background Service (Auto-Start with Windows)
+Automatically injects the widget whenever Antigravity starts (via desktop, taskbar, start menu, or CLI), and drops back to 0% CPU standby when Antigravity closes:
+- **Enable**: Double-click `一键开启同步启停(随开机自启).bat`
+- **Disable**: Double-click `一键取消同步启停.bat`
 
-```bash
-npm run daemon
-```
+#### Mode B: Companion Desktop Shortcut (Strict Process Pairing)
+Double-click `创建伴生启动快捷方式.bat` to generate the `Antigravity (Monitor).lnk` shortcut on your desktop.
+Launching through this shortcut starts Antigravity with the monitor attached. **When Antigravity is fully closed, the monitor daemon automatically terminates immediately (0 background processes remaining)**!
 
 ---
 

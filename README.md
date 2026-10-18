@@ -114,13 +114,16 @@ npm run inject
 
 ---
 
-### 方法三：常驻后台守护模式（自动随客户端重连）
+### 方法三：跟随 Antigravity 同步启停（推荐）
 
-如果您希望在 Antigravity 重启或新建窗口时自动持续生效，可以启动守护进程：
+#### 模式 A：开机自启静默守护（全场景无感同步）
+无论通过何种方式启动 Antigravity（桌面图标、任务栏固定项、开始菜单、命令行），监控挂件均会自动附加生效；Antigravity 关闭后，监控服务自动转入 0% CPU 极低功耗待命：
+- **开启**：双击运行 `一键开启同步启停(随开机自启).bat`
+- **关闭**：双击运行 `一键取消同步启停.bat`
 
-```bash
-npm run daemon
-```
+#### 模式 B：伴生启动快捷方式（严格同生共死）
+双击运行 `创建伴生启动快捷方式.bat`，即可在桌面生成 `Antigravity (Monitor).lnk` 快捷方式。
+通过此快捷方式启动客户端时，监控守护进程同步唤醒；**当 Antigravity 彻底退出时，监控守护进程立即自动终止，后台 0 残留**！
 
 ---
 
@@ -128,15 +131,22 @@ npm run daemon
 
 ```
 antigravity-context-monitor/
-├── assets/                 # 效果截图与图标资源
+├── assets/                                 # 效果截图与图标资源
 ├── src/
-│   ├── widget.js           # 挂件核心代码（UI、动画、事件委托与指标计算）
-│   ├── injector.js         # CDP 端口自动探测与注入模块
-│   └── daemon.js           # 常驻后台守护进程
-├── install.bat             # Windows 一键执行脚本
-├── package.json            # 项目配置与 npm 脚本
-├── LICENSE                 # MIT 开源许可证
-└── README.md               # 中文使用说明书
+│   ├── widget.js                           # 挂件核心代码（UI、动画、事件委托与指标计算）
+│   ├── injector.js                         # CDP 端口自动探测与多会话注入模块
+│   └── daemon.js                           # 生命周期守护进程（支持待命与伴生退出）
+├── scripts/
+│   ├── run-silent.vbs                      # 静默启动守护进程脚本
+│   ├── launch-antigravity-with-monitor.vbs # 客户端与监控伴生启动器
+│   └── make_shortcut.ps1                   # 桌面快捷方式生成脚本
+├── 一键开启同步启停(随开机自启).bat          # 配置开机静默同步启停
+├── 一键取消同步启停.bat                     # 取消开机自启并停止服务
+├── 创建伴生启动快捷方式.bat                 # 生成桌面伴生快捷方式
+├── install.bat                             # Windows 单次快速注入脚本
+├── package.json                            # 项目配置与 npm 脚本
+├── LICENSE                                 # MIT 开源许可证
+└── README.md                               # 中文使用说明书
 ```
 
 ---
