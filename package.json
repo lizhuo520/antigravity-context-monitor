@@ -7,7 +7,9 @@
   "scripts": {
     "start": "node src/injector.js",
     "inject": "node src/injector.js",
-    "daemon": "node src/daemon.js"
+    "patch": "node scripts/patch-native.js",
+    "unpatch": "node scripts/restore-native.js",
+    "restore": "node scripts/restore-native.js"
   },
   "keywords": [
     "antigravity",

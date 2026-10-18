@@ -84,42 +84,35 @@
 
 ### 前置要求
 - 已安装 [Node.js](https://nodejs.org/) (v18 或更高版本)。
-- 已安装并启动 [Antigravity](https://antigravity.google) 客户端。
+- 已安装 [Antigravity](https://antigravity.google) 客户端。
 
 ---
 
-### 方法一：Windows 一键快速注入（推荐）
+### 方法一：Electron 原生内嵌无感注入（强烈推荐 · 方案 A）
 
-1. 克隆或下载本项目：
-   ```bash
-   git clone https://github.com/lizhuo520/antigravity-context-monitor.git
-   cd antigravity-context-monitor
-   ```
-2. 双击运行 `install.bat`，即可一键自动检测并完成注入！
+**真正实现跟随客户端同生共死，后台 0 守护进程、0 计划任务、0 快捷方式篡改。**
+无论通过何种途径打开客户端（任务栏固定图标、开始菜单、桌面图标、应用内重启），监控挂件均在窗口加载完毕后 0 毫秒即刻就绪呈现！
+
+1. **一键开启**：
+   - 双击运行 **`一键开启原生无感注入.bat`**
+   - 或在终端执行：`npm run patch`
+   *(若当前客户端正在运行，安装器将安全预构建并在您下次重启客户端时 0.3 秒无损完成替换)*
+2. **一键纯净还原**：
+   - 双击运行 **`一键还原官方原生.bat`**
+   - 或在终端执行：`npm run restore`
+   *(仅剥离监控挂件，完整保护已安装的汉化等其他补丁不受影响)*
 
 ---
 
-### 方法二：命令行一键启动
+### 方法二：单次临时热注入（非侵入）
+
+如果您不想改动任何客户端程序文件，仅希望在当前窗口临时启用监控：
 
 ```bash
-# 克隆仓库
-git clone https://github.com/lizhuo520/antigravity-context-monitor.git
-cd antigravity-context-monitor
-
-# 一次性注入到当前 Antigravity 窗口
+# 一次性注入到当前已打开的 Antigravity 窗口
 npm start
 # 或运行
 npm run inject
-```
-
----
-
-### 方法三：常驻后台守护模式（自动随客户端重连）
-
-如果您希望在 Antigravity 重启或新建窗口时自动持续生效，可以启动守护进程：
-
-```bash
-npm run daemon
 ```
 
 ---
@@ -131,9 +124,15 @@ antigravity-context-monitor/
 ├── assets/                 # 效果截图与图标资源
 ├── src/
 │   ├── widget.js           # 挂件核心代码（UI、动画、事件委托与指标计算）
-│   ├── injector.js         # CDP 端口自动探测与注入模块
-│   └── daemon.js           # 常驻后台守护进程
-├── install.bat             # Windows 一键执行脚本
+│   ├── injector.js         # CDP 端口自动探测与多会话热注入模块
+│   └── daemon.js           # 备用轻量轮询守护进程
+├── scripts/
+│   ├── patch-native.js     # 原生 ASAR 补丁注入器 (带自动回滚与预注入架构)
+│   ├── restore-native.js   # 原生 ASAR 纯净还原器
+│   └── apply-staged.vbs    # 客户端重启无感原子替换脚本
+├── 一键开启原生无感注入.bat # 一键启用原生无感跟随模式
+├── 一键还原官方原生.bat     # 一键还原纯净状态
+├── install.bat             # 单次快速热注入脚本
 ├── package.json            # 项目配置与 npm 脚本
 ├── LICENSE                 # MIT 开源许可证
 └── README.md               # 中文使用说明书
