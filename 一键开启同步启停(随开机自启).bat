@@ -30,8 +30,10 @@ echo [1/3] 正在配置 Windows 开机静默同步服务...
 ) > "%TARGET_VBS%"
 
 echo [2/3] 已写入开机自启项: %TARGET_VBS%
+powershell -NoProfile -Command "$a = New-ScheduledTaskAction -Execute 'wscript.exe' -Argument '\"%~dp0scripts\run-silent.vbs\"' -WorkingDirectory '%~dp0'; $t = New-ScheduledTaskTrigger -AtLogOn; Register-ScheduledTask -TaskName 'AntigravityContextMonitor' -Action $a -Trigger $t -Force" >nul 2>&1
 
 echo [3/3] 正在启动后台监控守护进程...
+powershell -NoProfile -Command "Start-ScheduledTask -TaskName 'AntigravityContextMonitor' -ErrorAction SilentlyContinue" >nul 2>&1
 wscript.exe "%~dp0scripts\run-silent.vbs"
 
 echo.

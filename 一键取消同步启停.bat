@@ -20,7 +20,8 @@ if exist "%TARGET_VBS%" (
 )
 
 echo [2/2] 正在停止后台运行中的监控守护进程...
-powershell -NoProfile -Command "Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -like '*antigravity-context-monitor*daemon.js*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }"
+powershell -NoProfile -Command "Unregister-ScheduledTask -TaskName 'AntigravityContextMonitor' -Confirm:$false -ErrorAction SilentlyContinue" >nul 2>&1
+powershell -NoProfile -Command "Get-CimInstance Win32_Process | Where-Object CommandLine -like '*daemon.js*' | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }"
 
 echo.
 echo ======================================================
