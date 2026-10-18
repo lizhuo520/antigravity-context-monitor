@@ -1,5 +1,5 @@
 (() => {
-  const REQUIRED_VERSION = '1.0M-interactive-three-cards-v17-instant-switch-fixed-tps';
+  const REQUIRED_VERSION = '1.0M-interactive-three-cards-v18-robust-click-outside';
   const existingWidgets = document.querySelectorAll('#agy-model-context-widget, #agy-capsule-monitor-widget');
   if (window.__agyContextCircleVersion === REQUIRED_VERSION && existingWidgets.length === 1) {
     return;
@@ -11,7 +11,10 @@
   if (window.__agyContextCircleTimer) clearInterval(window.__agyContextCircleTimer);
   if (window.__agyFastUrlWatcher) clearInterval(window.__agyFastUrlWatcher);
   if (window.__agyRetryMountTimer) clearInterval(window.__agyRetryMountTimer);
-  if (window.__agyCloseMonitorPopovers) window.removeEventListener('click', window.__agyCloseMonitorPopovers);
+  if (window.__agyCloseMonitorPopovers) {
+    window.removeEventListener('click', window.__agyCloseMonitorPopovers);
+    document.removeEventListener('click', window.__agyCloseMonitorPopovers);
+  }
   if (window.__agyOnPopState) window.removeEventListener('popstate', window.__agyOnPopState);
   if (window.__agyOnHashChange) window.removeEventListener('hashchange', window.__agyOnHashChange);
 
@@ -309,11 +312,16 @@
   cardContext.addEventListener('click', (e) => e.stopPropagation());
 
   window.__agyCloseMonitorPopovers = (e) => {
-    if (!widget.contains(e.target)) {
+    try {
+      if (!e || !e.target || e.target === window || !(e.target instanceof Node) || !widget.contains(e.target)) {
+        closeAll();
+      }
+    } catch (_) {
       closeAll();
     }
   };
   window.addEventListener('click', window.__agyCloseMonitorPopovers);
+  document.addEventListener('click', window.__agyCloseMonitorPopovers);
 
   function findModelBtn() {
     const trigger = document.querySelector('button[data-testid="model-selector-trigger"]');
