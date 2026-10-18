@@ -10,7 +10,6 @@ If Not fso.FileExists(stagedPath) Then
     WScript.Quit 0
 End If
 
-' 循环等待 Antigravity 退出
 Do
     Set procList = GetObject("winmgmts:").ExecQuery("SELECT ProcessId FROM Win32_Process WHERE Name = 'Antigravity.exe'")
     If procList.Count = 0 Then
@@ -19,7 +18,6 @@ Do
     WScript.Sleep 300
 Loop
 
-' Antigravity 已退出，执行原子替换
 On Error Resume Next
 For i = 1 To 10
     Err.Clear
