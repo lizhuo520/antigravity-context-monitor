@@ -13,7 +13,7 @@ antigravityExe = WshShell.ExpandEnvironmentStrings("%LOCALAPPDATA%\Programs\anti
 If fso.FileExists(antigravityExe) Then
     WshShell.Run """" & antigravityExe & """", 1, False
 Else
-    MsgBox "未找到 Antigravity 客户端可执行文件：" & vbCrLf & antigravityExe, vbCritical, "启动失败"
+    MsgBox "Cannot find Antigravity executable: " & vbCrLf & antigravityExe, vbCritical, "Launch Failed"
     WScript.Quit 1
 End If
 
