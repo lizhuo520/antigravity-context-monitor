@@ -124,6 +124,29 @@ export function patchNative() {
     console.log(`[2/5] 发现已有安全备份 (${backupPath})，保持基线完整。`);
   }
 
+  // 1.5 快速通道：若已有预构建 staged 包且进程已退出，直接完成替换
+  const stagedAsar = path.join(resourcesDir, 'app.asar.staged');
+  if (fs.existsSync(stagedAsar) && !isProcessRunning()) {
+    console.log('[*] 检测到已就绪的预构建补丁包 (app.asar.staged)，且客户端已完全退出。');
+    console.log('[*] 正在执行瞬时原子替换...');
+    try {
+      if (fs.existsSync(swapOldAsar)) fs.rmSync(swapOldAsar, { force: true });
+      fs.renameSync(asarPath, swapOldAsar);
+      fs.renameSync(stagedAsar, asarPath);
+      if (fs.existsSync(swapOldAsar)) fs.rmSync(swapOldAsar, { force: true });
+      console.log('\n======================================================');
+      console.log('🎉 恭喜！原生内嵌补丁已快速应用成功！');
+      console.log('⚡ 运行机制: Electron 客户端原生加载，0 后台进程，0 计划任务');
+      console.log('🔄 生效方式: 重新启动 Antigravity 客户端即可！');
+      console.log('======================================================\n');
+      return;
+    } catch (e) {
+      if (fs.existsSync(swapOldAsar) && !fs.existsSync(asarPath)) {
+        try { fs.renameSync(swapOldAsar, asarPath); } catch (_) {}
+      }
+    }
+  }
+
   // 2. 解构 ASAR
   console.log('[3/5] 正在解构资源包 (ASAR)...');
   if (fs.existsSync(tempExtractDir)) {
@@ -252,13 +275,13 @@ ${INJECTION_END}
       fs.renameSync(tempNewAsar, stagedAsar);
 
       try {
-        const vbsPath = path.join(__dirname, 'apply-staged.vbs');
-        execSync(`powershell -NoProfile -Command "Start-Process wscript.exe -ArgumentList '\\"${vbsPath}\\"'"`, { windowsHide: true });
+        const regTaskPath = path.join(__dirname, 'register-swap-task.ps1');
+        execSync(`powershell -NoProfile -ExecutionPolicy Bypass -File "${regTaskPath}"`, { windowsHide: true });
       } catch (_) {}
 
       console.log('\n======================================================');
       console.log('✨ [无损预注入已就绪] 补丁包已成功预构建为: app.asar.staged');
-      console.log('✨ 已挂载后台静默守候：当您稍后重启/关闭 Antigravity 客户端时，');
+      console.log('✨ 已挂载系统级静默守候（Task Scheduler）：当您关闭 Antigravity 客户端时，');
       console.log('✨ 系统将在 0.3 秒内瞬间自动完成原子替换！');
       console.log('✨ 下次启动 Antigravity 时，监控挂件即刻原生生效！');
       console.log('======================================================\n');

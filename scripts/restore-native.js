@@ -151,13 +151,13 @@ export function restoreNative() {
       fs.renameSync(tempNewAsar, stagedAsar);
 
       try {
-        const vbsPath = path.join(__dirname, 'apply-staged.vbs');
-        execSync(`powershell -NoProfile -Command "Start-Process wscript.exe -ArgumentList '\\"${vbsPath}\\"'"`, { windowsHide: true });
+        const regTaskPath = path.join(__dirname, 'register-swap-task.ps1');
+        execSync(`powershell -NoProfile -ExecutionPolicy Bypass -File "${regTaskPath}"`, { windowsHide: true });
       } catch (_) {}
 
       console.log('\n======================================================');
       console.log('✨ [无损预还原已就绪] 纯净包已预构建为: app.asar.staged');
-      console.log('✨ 已挂载后台静默守候：当您稍后重启/关闭 Antigravity 客户端时，');
+      console.log('✨ 已挂载系统级静默守候（Task Scheduler）：当您关闭 Antigravity 客户端时，');
       console.log('✨ 系统将在 0.3 秒内瞬间自动完成原子替换！');
       console.log('✨ 挂件补丁将被干净剥离还原。');
       console.log('======================================================\n');
